@@ -1,12 +1,15 @@
-const ManagerException = require("../utils/exceptions/manager-exception");
-const { log, error } = require("../utils/logger");
-const jwt = require("../utils/jwt");
-const User = require("../models/user-model");
-const { Op } = require("sequelize");
-const Otp = require("../models/otp-model");
-const { encode, decode } = require("../utils/cryptor");
-const { sendOTPMail } = require("../utils/aws")
-const { convert, compare, inRange } = require("../utils/date-ops");
+import ManagerException from "../utils/exceptions/manager-exception.js";
+import { generateJwtToken } from "../utils/jwt.js";
+import User from "../models/user-model.js";
+import { Op } from "sequelize";
+import Otp from "../models/otp-model.js";
+import { encode, decode } from "../utils/cryptor.js";
+import { sendOTPMail } from "../utils/aws.js";
+import { convert, compare, inRange } from "../utils/date-ops.js";
+import Token from "../models/token-model.js";
+import { getLocation } from "../utils/location.js"
+import Location from '../models/location-model.js';
+import UserDevice from '../models/user-device-model.js'
 
 // To add minutes to the current time
 function addMinutesToDate(date, minutes) {
@@ -14,10 +17,9 @@ function addMinutesToDate(date, minutes) {
 }
 
 // this will send an OTP to phone number
-exports.initiateLogin = async (req, res) => {
+export const initiateLogin = async (req, res) => {
   try {
-    const { phoneNumber, type, email } = req.body;
-    let phone_message;
+    const { phoneNumber, email } = req.body;
 
     if (!phoneNumber && !email) {
       const response = {
@@ -96,7 +98,7 @@ exports.initiateLogin = async (req, res) => {
     }
     // Settings Params for SMS
     const params = {
-      Message: "your otp is: "+otp,
+      Message: "your otp is: " + otp,
       PhoneNumber: phoneNumber,
     };
 
@@ -118,7 +120,7 @@ exports.initiateLogin = async (req, res) => {
         throw new ManagerException(err.message);
       });
   } catch (err) {
-    error(req, err);
+    console.error(req, err);
     if (err instanceof ManagerException) {
       res.status(500);
     } else {
@@ -132,7 +134,7 @@ exports.initiateLogin = async (req, res) => {
   }
 };
 
-exports.verifyOtp = async (req, res) => {
+export const verifyOtp = async (req, res) => {
   try {
     const currentdate = new Date();
     // detailsKey from initiateLogin response
@@ -203,7 +205,7 @@ exports.verifyOtp = async (req, res) => {
               where: {
                 [Op.or]: {
                   email: email ? email : "",
-                  phone_number: phoneNumber ? phoneNumber : "",
+                  phoneNumber: phoneNumber ? phoneNumber : "",
                 },
               }
             });
@@ -215,14 +217,56 @@ exports.verifyOtp = async (req, res) => {
                   message: "Invalid phone number or email",
                 });
             }
-            const accessToken = jwt.generateJwtToken(fetchedUser);
-            fetchedUser.set("lastLogin", new Date());
-            fetchedUser.set("accessToken", accessToken);
-            await fetchedUser.save();
+            async function checkTokenLimit(userId) {
+              const tokenCount = await Token.count({ where: { userId: userId } });
+              return tokenCount;
+            }
+            const tokenLimit = 3;
+            const activeTokenCount = await checkTokenLimit(fetchedUser.id);
+
+            if (activeTokenCount >= tokenLimit) {
+              // Return an error or notify the user that the maximum device limit has been reached
+              return res.json({ status: "Failure", msg: "OTPMaximum device limit reached. Please logout from other device." });
+            }
+            const accessToken = generateJwtToken(fetchedUser);
+            const { range, country, region, eu, timezone, city, ll, metro, area } = await getLocation();
+            const userLoc = await Location.create({
+              range,
+              country,
+              region,
+              eu,
+              timezone,
+              city,
+              ll,
+              metro,
+              area,
+              userId: fetchedUser.id
+            });
+
+            const token = await Token.create({
+              token: accessToken,
+              userId: fetchedUser.id,
+              userLocationId: userLoc.id
+            })
+            const { browser, version, os, platform, source } = req.useragent;
+            const deviceName = req.useragent.isDesktop ? 'Desktop' : req.useragent.isMobile ? 'Mobile' : '';
+            // console.log(JSON.stringify(req.useragent));
+
+            // Save device details to the UserDevice table
+            await UserDevice.create({
+              userId: fetchedUser.id,
+              deviceName,
+              browser,
+              version,
+              os,
+              platform,
+              source,
+              tokenId: token.id
+            });
             const response = {
               status: 200,
-              message: "Login  successfull",
-              user: fetchedUser,
+              message: "token generated successfully",
+              token: accessToken,
             };
             return res.status(200).send(response);
           } else {
@@ -242,7 +286,7 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).send(response);
     }
   } catch (err) {
-    error(req, err);
+    console.error(req, err);
     if (err instanceof ManagerException) {
       res.status(500);
     } else {
@@ -256,17 +300,24 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-exports.logout = async (req, res) => {
+export const logout = async (req, res) => {
   try {
-    req.loggedInUser.accessToken = null;
-    await req.loggedInUser.save();
+    const id = req.loggedInUser.tokenId;
+    req.loggedInUser.tokenId = null;
+    req.loggedInUser = null;
+    await Token.destroy({
+      where: {
+        id: id
+      },
+      force: true
+    });
     const response = {
       status: 200,
       message: "logout successful",
     };
     return res.send(response);
   } catch (err) {
-    error(req, err);
+    console.error(req, err);
     if (err instanceof ManagerException) {
       res.status(500);
     } else {
@@ -279,3 +330,54 @@ exports.logout = async (req, res) => {
     });
   }
 };
+
+export const logoutAll = async (req, res) => {
+  try {
+    const id = req.loggedInUser.tokenId;
+    req.loggedInUser.tokenId = null;
+    req.loggedInUser = null;
+    await Token.destroy({
+      truncate: true
+    });
+    const response = {
+      status: 200,
+      message: "logout from all devices successful",
+    };
+    return res.send(response);
+  } catch (err) {
+    console.error(req, err);
+    if (err instanceof ManagerException) {
+      res.status(500);
+    } else {
+      res.status(400);
+    }
+    return res.status(400).send({
+      status: 400,
+      message: "logout all failed",
+      devMessage: err.message,
+    });
+  }
+};
+
+export const invalidateToken = async (tokenId) => {
+  try {
+    await Token.destroy({ where: { id: tokenId } });
+    const response = {
+      status: 200,
+      message: "token invalidated",
+    };
+    return res.send(response);
+  } catch (err) {
+    console.error(req, err);
+    if (err instanceof ManagerException) {
+      res.status(500);
+    } else {
+      res.status(400);
+    }
+    return res.status(400).send({
+      status: 400,
+      message: "logout failed",
+      devMessage: err.message,
+    });
+  }
+}

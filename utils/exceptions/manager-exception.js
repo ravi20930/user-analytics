@@ -9,4 +9,4 @@ class ManagerException extends Error {
     Error.captureStackTrace(this, this.constructor);
   }
 }
-module.exports = ManagerException;
+export default ManagerException;

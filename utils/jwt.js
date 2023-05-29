@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-exports.generateJwtToken = (user) => {
+export const generateJwtToken = (user) => {
     // expiration 1 month
     return jwt.sign({
         exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 30),
@@ -8,7 +8,7 @@ exports.generateJwtToken = (user) => {
     }, process.env.JWT_SECRET, { algorithm: 'HS256' });
 
 }
-exports.validateToken = (token) => {
+export const validateToken = (token) => {
     try {
         const isValid = jwt.verify(token, process.env.JWT_SECRET, { algorithm: 'HS256' });
         return isValid;

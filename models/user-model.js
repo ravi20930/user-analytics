@@ -1,7 +1,7 @@
-const sequelize = require("../utils/database");
-const { DataTypes } = require('sequelize');
+import { sequelize } from "../utils/database.js";
+import { DataTypes } from 'sequelize';
 
-const User = sequelize.define('User', {
+export const User = sequelize.define('user', {
     id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
@@ -17,48 +17,12 @@ const User = sequelize.define('User', {
         allowNull: false,
         unique: true,
     },
-    accessToken: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true,
-    },
     password: {
         type: DataTypes.STRING,
         allowNull: false,
-    },
-    // Add additional fields for token usage and analytics data
-    lastLogin: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
-    totalUsageDuration: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-    },
-    totalLoginCount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-    },
-    averageUsageDuration: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-    },
-    maxUsageDuration: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-    },
-    minUsageDuration: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-    },
+    }
 }, {
     tableName: 'users',
     timestamps: true,
 });
-
-module.exports = User;
+export default User;

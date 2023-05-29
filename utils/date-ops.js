@@ -1,4 +1,4 @@
-exports.convert = (d) => {
+export const convert = (d) => {
     // Converts the date in d to a date-object. The input can be:
     //   a date object: returned without modification
     //  an array      : Interpreted as [year,month,day]. NOTE: month is 0-11.
@@ -18,7 +18,7 @@ exports.convert = (d) => {
     );
 };
 
-exports.compare = (a, b) => {
+export const compare = (a, b) => {
     // Compare two dates (could be of any type supported by the convert
     // function above) and returns:
     //  -1 : if a < b
@@ -27,14 +27,13 @@ exports.compare = (a, b) => {
     // NaN : if a or b is an illegal date
     // NOTE: The code inside isFinite does an assignment (=).
     return (
-        isFinite(a = this.convert(a).valueOf()) &&
-            isFinite(b = this.convert(b).valueOf()) ?
+        isFinite(a = convert(a).valueOf()) &&
+            isFinite(b = convert(b).valueOf()) ?
             (a > b) - (a < b) :
             NaN
     );
 };
-
-exports.inRange = (d, start, end) => {
+export const inRange = (d, start, end) => {
     // Checks if date in d is between dates in start and end.
     // Returns a boolean or NaN:
     //    true  : if d is between start and end (inclusive)
@@ -42,9 +41,9 @@ exports.inRange = (d, start, end) => {
     //    NaN   : if one or more of the dates is illegal.
     // NOTE: The code inside isFinite does an assignment (=).
     return (
-        isFinite(d = this.convert(d).valueOf()) &&
-            isFinite(start = this.convert(start).valueOf()) &&
-            isFinite(end = this.convert(end).valueOf()) ?
+        isFinite(d = convert(d).valueOf()) &&
+            isFinite(start = convert(start).valueOf()) &&
+            isFinite(end = convert(end).valueOf()) ?
             start <= d && d <= end :
             NaN
     );

@@ -1,32 +1,52 @@
-const sequelize = require("../utils/database");
-const { DataTypes } = require('sequelize');
-const User = require('./user-model');
+import sequelize from "../utils/database.js";
+import { DataTypes } from 'sequelize';
+import User from './user-model.js';
 
-const Location = sequelize.define('userLocation', {
+export const Location = sequelize.define('userLocation', {
     id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
     },
-    ipAddress: {
+    range: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: false,
+    },
+    country: {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    latitude: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
+    region: {
+        type: DataTypes.STRING,
+        allowNull: false,
     },
-    longitude: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
-    }
-}, {
-    tableName: 'userLocations',
-    timestamps: true,
+    eu: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    timezone: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    city: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    ll: {
+        type: DataTypes.ARRAY(DataTypes.FLOAT),
+        allowNull: false,
+    },
+    metro: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    area: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
 });
 
 // Establish relationship between Location and User
 Location.belongsTo(User);
 User.hasMany(Location);
-
-module.exports = Location;
+export default Location;

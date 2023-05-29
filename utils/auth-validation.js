@@ -1,6 +1,8 @@
-const User = require("../models/user-model");
+import Token from "../models/token-model.js";
+import User from "../models/user-model.js";
+import { getLocation } from "./location.js";
 
-exports.validateAuthorization = () => {
+export const validateAuthorization = () => {
   return (req, res, next) => {
     const headers = req.headers;
     if (!headers.authorization) {
@@ -13,12 +15,24 @@ exports.validateAuthorization = () => {
     if (String(authToken).includes("Bearer ")) {
       authToken = headers.authorization.split("Bearer ")[1];
     }
-    User.findOne({ where: { accessToken: authToken }, /*include: UserRoles*/ })
-      .then((fetchedUser) => {
-        if (!fetchedUser) {
+    Token.findOne({
+      where: { token: authToken },
+      include: User
+    })
+      .then(async (tokenDetails) => {
+        // console.log(tokenDetails.token)
+        if (!tokenDetails) {
           return res.status(401).send({ status: 401, message: "Invalid Authorization." });
         }
-        req.loggedInUser = fetchedUser;
+        req.loggedInUser = tokenDetails.user;
+        req.loggedInUser.tokenId = tokenDetails.id;
+        const currentTime = Date.now();
+        if (tokenDetails.apiCallCount != 0) {
+          tokenDetails.totalUsageDuration += currentTime - tokenDetails.lastUsed; // Update usage duration
+        }
+        tokenDetails.lastUsed = currentTime; // Update the usage timestamp
+        await Token.increment('apiCallCount', { where: { id: tokenDetails.id } });
+        await tokenDetails.save();
         next();
       })
       .catch((error) => {

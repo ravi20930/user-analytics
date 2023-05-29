@@ -1,17 +1,16 @@
-require("dotenv").config();
-// password from ENV variable
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+
 const password = process.env.CRYPT_PASSWORD;
-const bcrypt = require('bcrypt');
 const saltRounds = 10;
-const crypto = require('crypto');
 const iv = Buffer.from(crypto.randomBytes(16));
 const ivstring = iv.toString('hex').slice(0, 16);
 
-exports.encrypt = async (value) => {
+export const encrypt = async (value) => {
     let encryptedPassword = await bcrypt.hash(value, saltRounds);
     return encryptedPassword;
 }
-exports.isValidPassword = async (password, encryptedPassword) => {
+export const isValidPassword = async (password, encryptedPassword) => {
     return await bcrypt.compare(password, encryptedPassword);
 }
 const sha1 = (input) => {
@@ -32,7 +31,7 @@ const password_derive_bytes = (password, salt, iterations, len) => {
     return Buffer.alloc(len, key);
 }
 
-exports.encode = async (string) => {
+export const encode = async (string) => {
     const key = password_derive_bytes(password, '', 100, 32);
     const cipher = crypto.createCipheriv('aes-256-cbc', key, ivstring);
     const part1 = cipher.update(string, 'utf8');
@@ -41,7 +40,7 @@ exports.encode = async (string) => {
     return encrypted;
 };
 
-exports.decode = async (string) => {
+export const decode = async (string) => {
     const key = password_derive_bytes(password, '', 100, 32);
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, ivstring);
     let decrypted = decipher.update(string, 'base64', 'utf8');

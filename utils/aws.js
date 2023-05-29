@@ -1,4 +1,4 @@
-const aws = require("aws-sdk");
+import aws from "aws-sdk";
 
 aws.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -6,7 +6,7 @@ aws.config.update({
 });
 
 const ses = new aws.SES({ apiVersion: "2010-12-01", region: "ap-south-1" });
-exports.createEmailTemplate = async () => {
+export const createEmailTemplate = async () => {
   try {
     const params = {
       Template: {
@@ -25,7 +25,7 @@ exports.createEmailTemplate = async () => {
 };
 
 
-exports.sendOTPMail = async (email, otp) => {
+export const sendOTPMail = async (email, otp) => {
   try {
     const params = {
       Destination: {

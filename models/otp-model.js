@@ -1,7 +1,7 @@
-const Sequelize = require("sequelize")
-const sequelize = require("../utils/database");
+import sequelize from "../utils/database.js";
+import { Sequelize } from 'sequelize';
 
-const Otp = sequelize.define('OTP', {
+export const Otp = sequelize.define('OTP', {
     id: {
         type: Sequelize.UUID,
         primaryKey: true,
@@ -13,20 +13,9 @@ const Otp = sequelize.define('OTP', {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
         allowNull: true
-    },
-    created_at: {
-        type: Sequelize.DATE,
-        allowNull: false,
-        defaultValue: sequelize.fn('now')
-    },
-    updated_at: {
-        type: Sequelize.DATE,
-        allowNull: false,
-        defaultValue: sequelize.fn('now')
     }
 },
 {
     tableName: 'OTP'
 });
-
-module.exports = Otp
+export default Otp;
